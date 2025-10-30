@@ -30,7 +30,11 @@ public class MicroFrame {
 
 	public MicroFrame() {
 		super();
-
+		
+		setTitle("MicroFrameWindow");
+		setSize(400, 400);
+		setFrameRate(60);
+		
 		onCreate();
 
 		createWindow();
@@ -41,21 +45,7 @@ public class MicroFrame {
 	public static void main(String[] args) {
 		new MicroFrame();
 	}
-
-	// for overriding
-	public void onCreate() {
-		setTitle("MicroFrameWindow");
-		setSize(400, 400);
-		setFrameRate(60);
-	}
-
-	// for overriding
-	public void onRender() {
-		graphics.setColor(Color.GREEN);
-		graphics.drawRect(mouseX, mouseY, 100, 100);
-		line(100,100,200,200);
-	}
-
+	
 	public final int getWidth() {
 		return width;
 	}
@@ -112,9 +102,36 @@ public class MicroFrame {
 		this.frameRate = frameRate;
 	}
 
+	
 	public final void line(int x, int y, int x1, int y1) {
 		graphics.drawLine(x, y, x1, y1);
 	}
+	
+	public final void rect(int x, int y, int width, int height) {
+		graphics.drawRect(x, y, width, height);
+	}
+	
+	public final void ellipse(int x, int y, int width, int height) {
+		graphics.drawOval(x, y, width, height);
+	}
+	
+	public final void stroke(Color c) {
+		graphics.setColor(c);
+	}
+	
+	public final void fill(Color c) {
+		
+	}
+	
+	public void onCreate() {}
+	public void onRender() {}
+	public void onQuit() {}
+	
+	public void onMousePressed() {}
+	public void onMouseReleased() {}
+	public void onMouseClicked() {}
+	public void onMouseMoved() {}
+	public void onMouseDragged() {}
 
 	private void run() {
 		while (running) {
@@ -171,6 +188,7 @@ public class MicroFrame {
 			@Override
 			public void windowClosing(WindowEvent e) {
 				stop();
+				onQuit();
 			}
 		});
 
@@ -179,6 +197,7 @@ public class MicroFrame {
 			public void keyPressed(KeyEvent e) {
 				if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
 					stop();
+					onQuit();
 				}
 			}
 		});
@@ -190,6 +209,7 @@ public class MicroFrame {
 				mouseY = e.getY();
 				mousePressed = true;
 				mouseButton = e.getButton();
+				onMousePressed();
 			}
 
 			@Override
@@ -198,12 +218,14 @@ public class MicroFrame {
 				mouseY = e.getY();
 				mousePressed = false;
 				mouseButton = e.getButton();
+				onMouseReleased();
 			}
 
 			@Override
 			public void mouseClicked(MouseEvent e) {
 				mouseX = e.getX();
 				mouseY = e.getY();
+				onMouseClicked();
 			}
 
 		});
@@ -214,12 +236,14 @@ public class MicroFrame {
 			public void mouseMoved(MouseEvent e) {
 				mouseX = e.getX();
 				mouseY = e.getY();
+				onMouseMoved();
 			}
 
 			@Override
 			public void mouseDragged(MouseEvent e) {
 				mouseX = e.getX();
 				mouseY = e.getY();
+				onMouseDragged();
 			}
 
 		});
