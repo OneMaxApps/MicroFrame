@@ -25,6 +25,6 @@ public final class ColorPool {
 			map.clear();
 		}
 		
-		return map.putIfAbsent(key, new Color(red,green,blue,alpha));
+		return map.computeIfAbsent(key, new Color(red,green,blue,alpha));
 	}
 }
