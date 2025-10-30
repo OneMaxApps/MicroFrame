@@ -16,18 +16,22 @@ import java.awt.event.WindowEvent;
 import java.awt.image.BufferStrategy;
 
 import microframe.util.ColorPool;
+import microframe.util.FramePerSecond;
 
 public abstract class MicroFrame {
 	private Frame frame;
 	private Canvas canvas;
 	private Graphics2D graphics;
 	private String title;
-	private Color colorStroke, colorFill;
+	private Color stroke, fill;
+	
+	private long frameCount;
+	
 	private int width, height;
 	private int mouseX, mouseY;
 	private int mouseButton;
 	private int frameRate;
-
+	
 	private boolean running;
 	private boolean mousePressed;
 
@@ -90,8 +94,8 @@ public abstract class MicroFrame {
 		this.title = requireNonNull(title, "title");
 	}
 
-	public final int getFrameRate() {
-		return frameRate;
+	public final double getFrameRate() {
+		return FramePerSecond.getFrameRate();
 	}
 
 	public final void setFrameRate(int frameRate) {
@@ -100,73 +104,126 @@ public abstract class MicroFrame {
 		}
 		this.frameRate = frameRate;
 	}
-
+	
+	public long getFrameCount() {
+		return frameCount;
+	}
 	
 	public final void line(int x, int y, int x1, int y1) {
-		graphics.setColor(colorStroke);
+		graphics.setColor(stroke);
 		graphics.drawLine(x, y, x1, y1);
 	}
 	
 	public final void rect(int x, int y, int width, int height) {		
-		graphics.setColor(colorFill);
+		graphics.setColor(fill);
 		graphics.fillRect(x, y, width, height);
 		
-		graphics.setColor(colorStroke);
+		graphics.setColor(stroke);
 		graphics.drawRect(x, y, width, height);
 	}
 	
 	public final void oval(int x, int y, int width, int height) {
-		graphics.setColor(colorFill);
+		graphics.setColor(fill);
 		graphics.fillOval(x, y, width, height);
 		
-		graphics.setColor(colorStroke);
+		graphics.setColor(stroke);
 		graphics.drawOval(x, y, width, height);
 	}
 	
 	public final void text(String text, int x, int y) {
-		graphics.setColor(colorFill);
+		graphics.setColor(fill);
 		graphics.drawString(text, x, y);
 	}
 	
+	public final void text(int number, int x, int y) {
+		text(String.valueOf(number),x,y);
+	}
+	
+	public final void text(float number, int x, int y) {
+		text(String.valueOf(number),x,y);
+	}
+	
+	public final void text(long number, int x, int y) {
+		text(String.valueOf(number),x,y);
+	}
+	
+	public final void text(double number, int x, int y) {
+		text(String.valueOf(number),x,y);
+	}
+	
+	public final void setTextSize(int textSize) {
+		if(graphics.getFont().getSize() == textSize) {
+			return;
+		}
+		
+		if(textSize < 1) {
+			throw new IllegalArgumentException("Text size cannot be less than 1");
+		}
+		
+		graphics.setFont(graphics.getFont().deriveFont((float) textSize));
+		
+	}
+	
 	public final void fill(int red, int green, int blue, int alpha) {
-		colorFill = ColorPool.getColor(red,green,blue,alpha);
+		fill = ColorPool.getColor(red,green,blue,alpha);
 	}
 	
 	public final void fill(int red, int green, int blue) {
-		colorFill = ColorPool.getColor(red,green,blue,255);
+		fill = ColorPool.getColor(red,green,blue,255);
 	}
 	
 	public final void fill(int gray, int alpha) {
-		colorFill = ColorPool.getColor(gray,gray,gray,alpha);
+		fill = ColorPool.getColor(gray,gray,gray,alpha);
 	}
 	
 	public final void fill(int gray) {
-		colorFill = ColorPool.getColor(gray,gray,gray,255);
+		fill = ColorPool.getColor(gray,gray,gray,255);
 	}
 	
 	public final void stroke(int red, int green, int blue, int alpha) {
-		colorStroke = ColorPool.getColor(red,green,blue,alpha);
+		stroke = ColorPool.getColor(red,green,blue,alpha);
 	}
 	
 	public final void stroke(int red, int green, int blue) {
-		colorStroke = ColorPool.getColor(red,green,blue,255);
+		stroke = ColorPool.getColor(red,green,blue,255);
 	}
 	
 	public final void stroke(int gray, int alpha) {
-		colorStroke = ColorPool.getColor(gray,gray,gray,alpha);
+		stroke = ColorPool.getColor(gray,gray,gray,alpha);
 	}
 	
 	public final void stroke(int gray) {
-		colorStroke = ColorPool.getColor(gray,gray,gray,255);
+		stroke = ColorPool.getColor(gray,gray,gray,255);
+	}
+	
+	public final void background(int red, int green, int blue, int alpha) {
+		fill = ColorPool.getColor(red,green,blue,alpha);
+		
+		strokeOff();
+		
+		rect(0,0,getWidth(),getHeight());
+	}
+	
+	public final void background(int red, int green, int blue) {
+		background(red,green,blue,255);
+	}
+	
+	public final void background(int gray, int alpha) {
+		background(gray,gray,gray,alpha);
+	}
+	
+	public final void background(int gray) {
+		background(gray,gray,gray,255);
 	}
 	
 	public final void strokeOff() {
-		colorStroke = ColorPool.getColor(0,0,0,0);
+		stroke = ColorPool.getColor(0,0,0,0);
 	}
 	
 	public final void fillOff() {
-		colorFill = ColorPool.getColor(0,0,0,0);
+		fill = ColorPool.getColor(0,0,0,0);
 	}
+
 	
 	public abstract void onCreate();
 	public abstract void onRender();
@@ -179,14 +236,20 @@ public abstract class MicroFrame {
 	public void onMouseDragged() {}
 
 	private void run() {
+		
 		while (running) {
+			
+			FramePerSecond.update();
+			
 			render();
 
 			try {
+				frameCount++;
 				Thread.sleep(1000 / frameRate);
 			} catch (InterruptedException e) {
 
 			}
+			
 		}
 
 	}

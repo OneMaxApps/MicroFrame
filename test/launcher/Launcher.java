@@ -11,18 +11,19 @@ public class Launcher extends MicroFrame {
 	@Override
 	public void onCreate() {
 		setTitle("Launcher");
-		setFrameRate(60);
+		setFrameRate(120);
 		setSize(400,400);
 	}
 
 	@Override
 	public void onRender() {
+		background(200);
+		
 		stroke(200,0,200);
 		fill(255,0,0);
 		
-		
-		
-		oval(getMouseX(),getMouseY(),100,100);
+		setTextSize(getMouseX()+1);
+		text(getFrameRate(),100,100);
 	}
 
 	@Override
