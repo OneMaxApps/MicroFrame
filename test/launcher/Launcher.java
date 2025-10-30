@@ -1,7 +1,5 @@
 package launcher;
 
-import java.awt.Color;
-
 import microframe.core.MicroFrame;
 
 public class Launcher extends MicroFrame {
@@ -15,16 +13,20 @@ public class Launcher extends MicroFrame {
 		setTitle("Launcher");
 		setFrameRate(60);
 		setSize(400,400);
-		
 	}
 
 	@Override
 	public void onRender() {
+		stroke(200,0,200);
+		fill(255,0,0);
 		
-		stroke(Color.CYAN);
-		rect(getMouseX(),getMouseY(),100,100);
 		
-		rect(200,200,100,100);
+		
+		oval(getMouseX(),getMouseY(),100,100);
+	}
+
+	@Override
+	public void onQuit() {
 		
 	}
 	

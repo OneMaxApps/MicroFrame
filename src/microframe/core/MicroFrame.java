@@ -15,11 +15,14 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferStrategy;
 
-public class MicroFrame {
+import microframe.util.ColorPool;
+
+public abstract class MicroFrame {
 	private Frame frame;
 	private Canvas canvas;
 	private Graphics2D graphics;
 	private String title;
+	private Color colorStroke, colorFill;
 	private int width, height;
 	private int mouseX, mouseY;
 	private int mouseButton;
@@ -40,10 +43,6 @@ public class MicroFrame {
 		createWindow();
 
 		launch();
-	}
-
-	public static void main(String[] args) {
-		new MicroFrame();
 	}
 	
 	public final int getWidth() {
@@ -104,28 +103,74 @@ public class MicroFrame {
 
 	
 	public final void line(int x, int y, int x1, int y1) {
+		graphics.setColor(colorStroke);
 		graphics.drawLine(x, y, x1, y1);
 	}
 	
-	public final void rect(int x, int y, int width, int height) {
+	public final void rect(int x, int y, int width, int height) {		
+		graphics.setColor(colorFill);
+		graphics.fillRect(x, y, width, height);
+		
+		graphics.setColor(colorStroke);
 		graphics.drawRect(x, y, width, height);
 	}
 	
-	public final void ellipse(int x, int y, int width, int height) {
+	public final void oval(int x, int y, int width, int height) {
+		graphics.setColor(colorFill);
+		graphics.fillOval(x, y, width, height);
+		
+		graphics.setColor(colorStroke);
 		graphics.drawOval(x, y, width, height);
 	}
 	
-	public final void stroke(Color c) {
-		graphics.setColor(c);
+	public final void text(String text, int x, int y) {
+		graphics.setColor(colorFill);
+		graphics.drawString(text, x, y);
 	}
 	
-	public final void fill(Color c) {
-		
+	public final void fill(int red, int green, int blue, int alpha) {
+		colorFill = ColorPool.getColor(red,green,blue,alpha);
 	}
 	
-	public void onCreate() {}
-	public void onRender() {}
-	public void onQuit() {}
+	public final void fill(int red, int green, int blue) {
+		colorFill = ColorPool.getColor(red,green,blue,255);
+	}
+	
+	public final void fill(int gray, int alpha) {
+		colorFill = ColorPool.getColor(gray,gray,gray,alpha);
+	}
+	
+	public final void fill(int gray) {
+		colorFill = ColorPool.getColor(gray,gray,gray,255);
+	}
+	
+	public final void stroke(int red, int green, int blue, int alpha) {
+		colorStroke = ColorPool.getColor(red,green,blue,alpha);
+	}
+	
+	public final void stroke(int red, int green, int blue) {
+		colorStroke = ColorPool.getColor(red,green,blue,255);
+	}
+	
+	public final void stroke(int gray, int alpha) {
+		colorStroke = ColorPool.getColor(gray,gray,gray,alpha);
+	}
+	
+	public final void stroke(int gray) {
+		colorStroke = ColorPool.getColor(gray,gray,gray,255);
+	}
+	
+	public final void strokeOff() {
+		colorStroke = ColorPool.getColor(0,0,0,0);
+	}
+	
+	public final void fillOff() {
+		colorFill = ColorPool.getColor(0,0,0,0);
+	}
+	
+	public abstract void onCreate();
+	public abstract void onRender();
+	public abstract void onQuit();
 	
 	public void onMousePressed() {}
 	public void onMouseReleased() {}
@@ -187,8 +232,8 @@ public class MicroFrame {
 		frame.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent e) {
-				stop();
 				onQuit();
+				stop();
 			}
 		});
 
@@ -196,8 +241,8 @@ public class MicroFrame {
 			@Override
 			public void keyPressed(KeyEvent e) {
 				if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-					stop();
 					onQuit();
+					stop();
 				}
 			}
 		});
