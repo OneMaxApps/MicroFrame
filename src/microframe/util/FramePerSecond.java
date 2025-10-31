@@ -1,10 +1,9 @@
 package microframe.util;
 
 public final class FramePerSecond {
-	private static double fps;
+	private static double frameRate;
 	private static long lastTime = System.nanoTime();
 	private static int frameCount;
-	
 	
 	private FramePerSecond() {
 		
@@ -16,14 +15,14 @@ public final class FramePerSecond {
 		long currentTime = System.nanoTime();
 		
 		if (currentTime - lastTime >= 1_000_000_000L) {
-			fps = frameCount;
+			frameRate = frameCount;
 			frameCount = 0;
 			lastTime = currentTime;
 		}
 	}
 	
 	public static double getFrameRate() {
-		return fps;
+		return frameRate;
 	}
 	
 }

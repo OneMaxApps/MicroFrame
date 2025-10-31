@@ -26,5 +26,6 @@ public final class ColorPool {
 		}
 		
 		return map.computeIfAbsent(key, k -> new Color(red,green,blue,alpha));
+		
 	}
 }

@@ -1,8 +1,11 @@
 package launcher;
 
 import microframe.core.MicroFrame;
+import microframe.graphics.Image;
 
 public class Launcher extends MicroFrame {
+	
+	Image img;
 	
 	public static void main(String[] args) {
 		new Launcher();
@@ -10,20 +13,22 @@ public class Launcher extends MicroFrame {
 
 	@Override
 	public void onCreate() {
-		setTitle("Launcher");
-		setFrameRate(120);
-		setSize(400,400);
+		setWindowTitle("Launcher");
+		setWindowSize(400,400);
+		setFrameRate(60);
+		
+		img = loadImage("C:\\Users\\002\\Desktop\\i.jpg");
 	}
 
 	@Override
 	public void onRender() {
-		background(200);
+		background(0);
+		fill(255);
+		setTextSize(24);
+		text("FPS: "+getFrameRate(),4,24);
 		
-		stroke(200,0,200);
 		fill(255,0,0);
-		
-		setTextSize(getMouseX()+1);
-		text(getFrameRate(),100,100);
+		image(img,getMouseX(),getMouseY());
 	}
 
 	@Override
