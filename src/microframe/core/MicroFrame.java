@@ -4,15 +4,18 @@ import static java.util.Objects.requireNonNull;
 
 import java.awt.BasicStroke;
 import java.awt.Canvas;
-import java.awt.Color;
 import java.awt.Frame;
 import java.awt.Graphics2D;
+import java.awt.Insets;
 import java.awt.Toolkit;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferStrategy;
@@ -25,15 +28,13 @@ import javax.imageio.ImageIO;
 import microframe.graphics.Image;
 import microframe.util.ColorPool;
 import microframe.util.FramePerSecond;
+import microframe.util.Style;
 
 public abstract class MicroFrame {
 	private final Frame frame = new Frame("");
 	private Canvas canvas;
 	private Graphics2D graphics;
 	private String title;
-	private Color stroke, fill;
-	private BasicStroke strokeWeight;
-
 	private long frameCount;
 
 	private int width, height;
@@ -43,13 +44,13 @@ public abstract class MicroFrame {
 
 	private boolean running;
 	private boolean mousePressed;
-	private boolean windowSizeInitialized;
 
 	public MicroFrame() {
 		super();
 
 		setWindowTitle("MicroFrameWindow");
 		width = height = 400;
+
 		setFrameRate(60);
 
 		onCreate();
@@ -59,24 +60,30 @@ public abstract class MicroFrame {
 		launch();
 	}
 
+	public final void setWindowResizeEnabled(boolean enabled) {
+		frame.setResizable(enabled);
+	}
+
+	public final void quit() {
+		stop();
+	}
+
 	public final float getStrokeWeight() {
-		return strokeWeight.getLineWidth();
+		return Style.getStrokeWeight().getLineWidth();
 	}
 
 	public final void setStrokeWeight(float weight) {
+		float sw = Style.getStrokeWeight().getLineWidth();
+
 		if (weight < 1) {
 			throw new IllegalArgumentException("Stroke weight cannot be less than 1");
 		}
 
-		if (strokeWeight == null) {
-			strokeWeight = new BasicStroke(weight);
+		if (sw != weight) {
+			Style.setStrokeWeight(new BasicStroke(weight));
 		}
 
-		if (strokeWeight.getLineWidth() != weight) {
-			strokeWeight = new BasicStroke(weight);
-		}
-
-		graphics.setStroke(this.strokeWeight);
+		graphics.setStroke(Style.getStrokeWeight());
 	}
 
 	public final int getWidth() {
@@ -104,9 +111,6 @@ public abstract class MicroFrame {
 	}
 
 	public final void setWindowSize(int width, int height) {
-		if (windowSizeInitialized) {
-			throw new IllegalStateException("Window size already initialized");
-		}
 
 		if (width < 100) {
 			throw new IllegalArgumentException("Width cannot be less than 100");
@@ -119,16 +123,15 @@ public abstract class MicroFrame {
 		this.width = width;
 		this.height = height;
 
-		windowSizeInitialized = true;
 	}
-	
+
 	public final void setFullScreen() {
 		final int width = (int) Toolkit.getDefaultToolkit().getScreenSize().getWidth();
 		final int height = (int) Toolkit.getDefaultToolkit().getScreenSize().getHeight();
-		
+
 		frame.setUndecorated(true);
-		
-		setWindowSize(width,height);
+
+		setWindowSize(width, height);
 	}
 
 	public final String getTitle() {
@@ -155,29 +158,56 @@ public abstract class MicroFrame {
 	}
 
 	public final void line(int x, int y, int x1, int y1) {
-		graphics.setColor(stroke);
-		graphics.drawLine(x, y, x1, y1);
+		if (Style.getStroke().getAlpha() != 0) {
+			graphics.setColor(Style.getStroke());
+			graphics.drawLine(x, y, x1, y1);
+		}
 	}
 
 	public final void rect(int x, int y, int width, int height) {
-		graphics.setColor(fill);
-		graphics.fillRect(x, y, width, height);
+		if (Style.getFill().getAlpha() != 0) {
+			graphics.setColor(Style.getFill());
+			graphics.fillRect(x, y, width, height);
+		}
 
-		graphics.setColor(stroke);
-		graphics.drawRect(x, y, width, height);
+		if (Style.getStroke().getAlpha() != 0) {
+			graphics.setColor(Style.getStroke());
+			graphics.drawRect(x, y, width, height);
+		}
+
+	}
+
+	public final void point(int x, int y) {
+		if (Style.getStroke().getAlpha() != 0) {
+			graphics.setColor(Style.getStroke());
+			final int size = (int) Style.getStrokeWeight().getLineWidth();
+
+			graphics.drawRect(x, y, size, size);
+		}
 	}
 
 	public final void oval(int x, int y, int width, int height) {
-		graphics.setColor(fill);
-		graphics.fillOval(x, y, width, height);
+		if (Style.getFill().getAlpha() != 0) {
+			graphics.setColor(Style.getFill());
+			graphics.fillOval(x, y, width, height);
+		}
 
-		graphics.setColor(stroke);
-		graphics.drawOval(x, y, width, height);
+		if (Style.getStroke().getAlpha() != 0) {
+			graphics.setColor(Style.getStroke());
+			graphics.drawOval(x, y, width, height);
+		}
 	}
 
 	public final void text(String text, int x, int y) {
-		graphics.setColor(fill);
-		graphics.drawString(text, x, y);
+		if (text == null) {
+			throw new IllegalArgumentException("Text cannot be null");
+		}
+
+		if (Style.getFill().getAlpha() != 0) {
+			graphics.setColor(Style.getFill());
+			graphics.drawString(text, x, y);
+		}
+
 	}
 
 	public final void text(int number, int x, int y) {
@@ -195,23 +225,23 @@ public abstract class MicroFrame {
 	public final void text(double number, int x, int y) {
 		text(String.valueOf(number), x, y);
 	}
-	
+
 	public final void image(Image image, int x, int y, int w, int h) {
-		if(image == null) {
+		if (image == null) {
 			throw new IllegalArgumentException("Image cannot be null");
 		}
-		
-		graphics.drawImage(image.getBuffer(),x,y,w,h,null);
-		
+
+		graphics.drawImage(image.getBuffer(), x, y, w, h, null);
+
 	}
-	
+
 	public final void image(Image image, int x, int y) {
-		if(image == null) {
+		if (image == null) {
 			throw new IllegalArgumentException("Image cannot be null");
 		}
-		
-		graphics.drawImage(image.getBuffer(),x,y,null);
-		
+
+		graphics.drawImage(image.getBuffer(), x, y, null);
+
 	}
 
 	public final void setTextSize(int textSize) {
@@ -228,39 +258,39 @@ public abstract class MicroFrame {
 	}
 
 	public final void fill(int red, int green, int blue, int alpha) {
-		fill = ColorPool.getColor(red, green, blue, alpha);
+		Style.setFill(ColorPool.getColor(red, green, blue, alpha));
 	}
 
 	public final void fill(int red, int green, int blue) {
-		fill = ColorPool.getColor(red, green, blue, 255);
+		Style.setFill(ColorPool.getColor(red, green, blue, 255));
 	}
 
 	public final void fill(int gray, int alpha) {
-		fill = ColorPool.getColor(gray, gray, gray, alpha);
+		Style.setFill(ColorPool.getColor(gray, gray, gray, alpha));
 	}
 
 	public final void fill(int gray) {
-		fill = ColorPool.getColor(gray, gray, gray, 255);
+		Style.setFill(ColorPool.getColor(gray, gray, gray, 255));
 	}
 
 	public final void stroke(int red, int green, int blue, int alpha) {
-		stroke = ColorPool.getColor(red, green, blue, alpha);
+		Style.setStroke(ColorPool.getColor(red, green, blue, alpha));
 	}
 
 	public final void stroke(int red, int green, int blue) {
-		stroke = ColorPool.getColor(red, green, blue, 255);
+		Style.setStroke(ColorPool.getColor(red, green, blue, 255));
 	}
 
 	public final void stroke(int gray, int alpha) {
-		stroke = ColorPool.getColor(gray, gray, gray, alpha);
+		Style.setStroke(ColorPool.getColor(gray, gray, gray, alpha));
 	}
 
 	public final void stroke(int gray) {
-		stroke = ColorPool.getColor(gray, gray, gray, 255);
+		Style.setStroke(ColorPool.getColor(gray, gray, gray, 255));
 	}
 
 	public final void background(int red, int green, int blue, int alpha) {
-		fill = ColorPool.getColor(red, green, blue, alpha);
+		Style.setFill(ColorPool.getColor(red, green, blue, alpha));
 
 		strokeOff();
 
@@ -280,16 +310,16 @@ public abstract class MicroFrame {
 	}
 
 	public final void strokeOff() {
-		stroke = ColorPool.getColor(0, 0, 0, 0);
+		Style.setStroke(ColorPool.getColor(0, 0, 0, 0));
 	}
 
 	public final void fillOff() {
-		fill = ColorPool.getColor(0, 0, 0, 0);
+		Style.setFill(ColorPool.getColor(0, 0, 0, 0));
 	}
 
 	public final Image loadImage(String path) {
-		requireNonNull(path,"path");
-		
+		requireNonNull(path, "path");
+
 		BufferedImage bi = null;
 
 		try {
@@ -297,7 +327,7 @@ public abstract class MicroFrame {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+
 		return new Image(bi);
 	}
 
@@ -322,6 +352,18 @@ public abstract class MicroFrame {
 	public void onMouseDragged() {
 	}
 
+	public void onMouseWheelMoved() {
+	}
+
+	public void onKeyTyped() {
+	}
+
+	public void onKeyPressed() {
+	}
+
+	public void onKeyReleased() {
+	}
+
 	private void run() {
 
 		while (running) {
@@ -342,16 +384,13 @@ public abstract class MicroFrame {
 	}
 
 	private void render() {
-		BufferStrategy bs = canvas.getBufferStrategy();
+		final BufferStrategy bs = canvas.getBufferStrategy();
 
 		if (bs == null) {
 			return;
 		}
 
 		graphics = (Graphics2D) bs.getDrawGraphics();
-
-		graphics.setColor(Color.BLACK);
-		graphics.fillRect(0, 0, getWidth(), getHeight());
 
 		onRender();
 
@@ -362,14 +401,20 @@ public abstract class MicroFrame {
 
 	private void createWindow() {
 		frame.setTitle(title);
-		frame.setSize(getWidth(), getHeight());
+		frame.setVisible(true);
+
+		final Insets ins = frame.getInsets();
+
+		final int correctFrameWidth = ins.left + ins.right + getWidth();
+		final int correctFrameHeight = ins.top + ins.bottom + getHeight();
+
+		frame.setSize(correctFrameWidth, correctFrameHeight);
 
 		canvas = new Canvas();
 		canvas.setSize(getWidth(), getHeight());
 
 		frame.add(canvas);
 		frame.setLocationRelativeTo(null);
-		frame.setVisible(true);
 		frame.setResizable(false);
 
 		canvas.createBufferStrategy(2);
@@ -441,6 +486,33 @@ public abstract class MicroFrame {
 				onMouseDragged();
 			}
 
+		});
+
+		canvas.addMouseWheelListener(new MouseWheelListener() {
+
+			@Override
+			public void mouseWheelMoved(MouseWheelEvent e) {
+				onMouseWheelMoved();
+			}
+
+		});
+
+		canvas.addKeyListener(new KeyListener() {
+
+			@Override
+			public void keyTyped(KeyEvent e) {
+				onKeyTyped();
+			}
+
+			@Override
+			public void keyPressed(KeyEvent e) {
+				onKeyPressed();
+			}
+
+			@Override
+			public void keyReleased(KeyEvent e) {
+				onKeyReleased();
+			}
 		});
 
 		canvas.setFocusable(true);

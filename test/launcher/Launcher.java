@@ -14,26 +14,31 @@ public class Launcher extends MicroFrame {
 	@Override
 	public void onCreate() {
 		setWindowTitle("Launcher");
-		setWindowSize(400,400);
+		
 		setFrameRate(60);
 		
-		img = loadImage("C:\\Users\\002\\Desktop\\i.jpg");
+		
 	}
 
 	@Override
 	public void onRender() {
-		background(0);
-		fill(255);
-		setTextSize(24);
-		text("FPS: "+getFrameRate(),4,24);
+		background(0,1);
 		
-		fill(255,0,0);
-		image(img,getMouseX(),getMouseY());
+		stroke(255,0,0);
+		point(getMouseX(),getMouseY());
+		
+		System.out.println(getMouseX() + " : " + getMouseY());
 	}
 
 	@Override
 	public void onQuit() {
 		
+	}
+	
+	@Override
+	public void onMousePressed() {
+		setWindowSize(getWidth()+10,getHeight());
+
 	}
 	
 }

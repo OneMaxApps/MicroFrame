@@ -1,11 +1,20 @@
 package microframe.util;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+
 import java.awt.Color;
 import java.util.HashMap;
 import java.util.Map;
 
 public final class ColorPool {
 	private static final Map<Integer, Color> map = new HashMap<Integer, Color>();
+	private static final int MIN_VALUE, MAX_VALUE;
+	
+	static {
+		MIN_VALUE = 0;
+		MAX_VALUE = 255;
+	}
 	
 	private ColorPool() {
 		
@@ -25,7 +34,12 @@ public final class ColorPool {
 			map.clear();
 		}
 		
-		return map.computeIfAbsent(key, k -> new Color(red,green,blue,alpha));
+		final int r = max(MIN_VALUE,min(red,MAX_VALUE));
+		final int g = max(MIN_VALUE,min(green,MAX_VALUE));
+		final int b = max(MIN_VALUE,min(blue,MAX_VALUE));
+		final int a = max(MIN_VALUE,min(alpha,MAX_VALUE));
+		
+		return map.computeIfAbsent(key, k -> new Color(r,g,b,a));
 		
 	}
 }
