@@ -35,9 +35,9 @@ public abstract class MicroFrame {
 	private Canvas canvas;
 	private Graphics2D graphics;
 	private String title;
+	private long lastTime = System.nanoTime();
 	private long frameCount;
-
-	private int width, height;
+	
 	private int mouseX, mouseY;
 	private int lastPressedMouseButton;
 	private int frameRate;
@@ -46,13 +46,14 @@ public abstract class MicroFrame {
 	
 	private boolean running;
 	private boolean mousePressed;
+	private boolean sizeOfWindowWasInits;
 
 	public MicroFrame() {
 		super();
 
 		setWindowTitle("MicroFrameWindow");
-		width = height = 400;
-
+		frame.setSize(400,400);
+		frame.setResizable(false);
 		setFrameRate(60);
 
 		onCreate();
@@ -108,19 +109,27 @@ public abstract class MicroFrame {
 	
 	// == Window API ==
 	public final void setResizeEnabled(boolean enabled) {
+		if(frame.isResizable() == enabled) {
+			return;
+		}
+		
 		frame.setResizable(enabled);
+		
 	}
 
 	public final int getWidth() {
-		return width;
+		return frame.getWidth();
 	}
 
 	public final int getHeight() {
-		return height;
+		return frame.getHeight();
 	}
 
 	public final void setWindowSize(int width, int height) {
-
+		if(sizeOfWindowWasInits) {
+			throw new IllegalStateException("Window not resizable");
+		}
+		
 		if (width < 100) {
 			throw new IllegalArgumentException("Width cannot be less than 100");
 		}
@@ -129,9 +138,9 @@ public abstract class MicroFrame {
 			throw new IllegalArgumentException("Height cannot be less than 100");
 		}
 
-		this.width = width;
-		this.height = height;
-
+		frame.setSize(width,height);
+		
+		sizeOfWindowWasInits = true;
 	}
 
 	public final void setFullScreen() {
@@ -434,23 +443,27 @@ public abstract class MicroFrame {
 		graphics.drawImage(image.getBuffer(), x, y, null);
 
 	}
-
 	
+	// TODO release correct update time
 	private void run() {
-
+		
 		while (running) {
-
-			FramePerSecond.update();
-
-			render();
-
-			try {
+			
+			final long now = System.nanoTime();
+			final long delta = 1_000_000_000L/frameRate;
+			
+			if(now-lastTime >= delta) {
 				frameCount++;
-				Thread.sleep(1000 / frameRate);
-			} catch (InterruptedException e) {
-
+				FramePerSecond.update();
+				render();
+			} else {
+				try {	
+					Thread.sleep(1);
+				} catch (InterruptedException e) {
+	
+				}
 			}
-
+			
 		}
 
 	}
@@ -463,11 +476,10 @@ public abstract class MicroFrame {
 		}
 
 		graphics = (Graphics2D) bs.getDrawGraphics();
-
+		
 		onRender();
-
 		graphics.dispose();
-
+		
 		bs.show();
 	}
 
@@ -487,14 +499,13 @@ public abstract class MicroFrame {
 
 		frame.add(canvas);
 		frame.setLocationRelativeTo(null);
-		frame.setResizable(false);
 
 		canvas.createBufferStrategy(2);
 
-		setupListeners();
+		initListeners();
 	}
 
-	private void setupListeners() {
+	private void initListeners() {
 
 		frame.addWindowListener(new WindowAdapter() {
 			@Override
@@ -502,6 +513,7 @@ public abstract class MicroFrame {
 				onQuit();
 				stop();
 			}
+			
 		});
 
 		canvas.addMouseListener(new MouseAdapter() {
@@ -576,6 +588,7 @@ public abstract class MicroFrame {
 			@Override
 			public void keyPressed(KeyEvent e) {
 				if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+					
 					onQuit();
 					stop();
 				}
