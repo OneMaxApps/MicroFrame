@@ -1,8 +1,7 @@
 package launcher;
 
-import static microframe.util.MathUtils.convert;
-
 import java.awt.Color;
+import java.awt.event.MouseEvent;
 
 import microframe.core.MicroFrame;
 import microframe.graphics.Image;
@@ -19,24 +18,25 @@ public class Launcher extends MicroFrame {
 	public void onCreate() {
 		setWindowTitle("Launcher");
 		setWindowSize(400,400);
-		
 		setFrameRate(60);
 
-		setResizeEnabled(true);
 	}
 
 	@Override
 	public void onRender() {
 		background(Color.BLACK);
+		int w = getWidth();
+		int h = getHeight();
+		stroke(Color.RED);
+		fillOff();
+		rect((int) (w*.25f),(int) (h*.25f),(int) (w*.5f),(int) (h*.5f));
 		
-		for(int x = 0; x < getWidth(); x++) {
-			for(int y = 0; y < getHeight(); y++) {
-				stroke((int) convert(x, 0, getWidth(), 0,255),(int) convert(x, 0, getWidth(), 0,255),(int) convert(y, 0, getHeight(), 0,255));
-				point(x,y);
-			}
-		}
-
 		
+		fill(200);
+		setTextSize(20);
+		text("FPS: "+getFrameRate(),0,20);
+		
+		System.out.println(getWidth());
 	}
 
 	@Override
@@ -44,4 +44,11 @@ public class Launcher extends MicroFrame {
 		
 	}
 	
+	@Override
+	public void onMousePressed(MouseEvent e) {
+		if(e.getButton() == 3) {
+			setResizeEnabled(true);
+			setWindowSize(500, 500);
+		}
+	}
 }

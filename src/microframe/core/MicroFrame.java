@@ -36,11 +36,11 @@ public abstract class MicroFrame {
 	private Graphics2D graphics;
 	private String title;
 	private long lastTime = System.nanoTime();
-	private long frameCount;
-	
+	private long frameCount,deltaFrameTime;
+
+	private int width,height;
 	private int mouseX, mouseY;
 	private int lastPressedMouseButton;
-	private int frameRate;
 
 	private char pressedKey;
 	
@@ -55,7 +55,7 @@ public abstract class MicroFrame {
 		frame.setSize(400,400);
 		frame.setResizable(false);
 		setFrameRate(60);
-
+		
 		onCreate();
 
 		createWindow();
@@ -85,7 +85,7 @@ public abstract class MicroFrame {
 		if (frameRate < 1) {
 			throw new IllegalArgumentException("Frame rate cannot be less than 1");
 		}
-		this.frameRate = frameRate;
+		deltaFrameTime = 1_000_000_000L / frameRate;
 	}
 
 	public long getFrameCount() {
@@ -118,27 +118,38 @@ public abstract class MicroFrame {
 	}
 
 	public final int getWidth() {
-		return frame.getWidth();
+		return width;
 	}
 
 	public final int getHeight() {
-		return frame.getHeight();
+		return height;
 	}
 
 	public final void setWindowSize(int width, int height) {
-		if(sizeOfWindowWasInits) {
+		if(sizeOfWindowWasInits && !frame.isResizable()) {
 			throw new IllegalStateException("Window not resizable");
 		}
 		
-		if (width < 100) {
-			throw new IllegalArgumentException("Width cannot be less than 100");
+		if(this.width == width && this.height == height) {
+			return;
+		}
+		
+		if (width < 10) {
+			throw new IllegalArgumentException("Width cannot be less than 10");
 		}
 
-		if (height < 100) {
-			throw new IllegalArgumentException("Height cannot be less than 100");
+		if (height < 10) {
+			throw new IllegalArgumentException("Height cannot be less than 10");
 		}
+		
+		this.width = width;
+		this.height = height;
 
-		frame.setSize(width,height);
+		final Insets ins = frame.getInsets();
+		final int w = width + ins.left + ins.right;
+		final int h = height + ins.top + ins.bottom;
+		
+		frame.setSize(w,h);
 		
 		sizeOfWindowWasInits = true;
 	}
@@ -444,23 +455,22 @@ public abstract class MicroFrame {
 
 	}
 	
-	// TODO release correct update time
 	private void run() {
 		
 		while (running) {
 			
 			final long now = System.nanoTime();
-			final long delta = 1_000_000_000L/frameRate;
 			
-			if(now-lastTime >= delta) {
+			if(now-lastTime >= deltaFrameTime) {
 				frameCount++;
 				FramePerSecond.update();
 				render();
+				lastTime = now;
 			} else {
 				try {	
 					Thread.sleep(1);
 				} catch (InterruptedException e) {
-	
+					e.printStackTrace();
 				}
 			}
 			
@@ -480,7 +490,11 @@ public abstract class MicroFrame {
 		onRender();
 		graphics.dispose();
 		
-		bs.show();
+		try {
+			bs.show();
+		} catch(Exception e) {
+			// When user will close application, it's will'be ignored
+		}
 	}
 
 	private void createWindow() {
