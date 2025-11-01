@@ -24,6 +24,14 @@ public final class ColorPool {
 		return createIfAbsent(red,green,blue,alpha);
 	}
 	
+	public static Color getColor(Color color) {
+		if(color == null) {
+			throw new IllegalArgumentException("Color cannot be null");
+		}
+		
+		return createIfAbsent(color.getRed(),color.getGreen(),color.getBlue(),color.getAlpha());
+	}
+	
 	private static Color createIfAbsent(int red, int green, int blue, int alpha) {
 		final int key = ((alpha & 0xFF) << 24) |
 				  ((red & 0xFF) << 16) |

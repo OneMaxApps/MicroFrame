@@ -4,11 +4,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.awt.BasicStroke;
 import java.awt.Canvas;
+import java.awt.Color;
 import java.awt.Frame;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.Toolkit;
-import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
@@ -39,9 +39,11 @@ public abstract class MicroFrame {
 
 	private int width, height;
 	private int mouseX, mouseY;
-	private int mouseButton;
+	private int lastPressedMouseButton;
 	private int frameRate;
 
+	private char pressedKey;
+	
 	private boolean running;
 	private boolean mousePressed;
 
@@ -60,30 +62,53 @@ public abstract class MicroFrame {
 		launch();
 	}
 
-	public final void setWindowResizeEnabled(boolean enabled) {
-		frame.setResizable(enabled);
-	}
+	
+	// == Life-cycle API ==
+	public abstract void onCreate();
 
+	public abstract void onRender();
+
+	public abstract void onQuit();
+
+	
+	// == System API ==
 	public final void quit() {
 		stop();
 	}
 
-	public final float getStrokeWeight() {
-		return Style.getStrokeWeight().getLineWidth();
+	public final double getFrameRate() {
+		return FramePerSecond.getFrameRate();
 	}
 
-	public final void setStrokeWeight(float weight) {
-		float sw = Style.getStrokeWeight().getLineWidth();
+	public final void setFrameRate(int frameRate) {
+		if (frameRate < 1) {
+			throw new IllegalArgumentException("Frame rate cannot be less than 1");
+		}
+		this.frameRate = frameRate;
+	}
 
-		if (weight < 1) {
-			throw new IllegalArgumentException("Stroke weight cannot be less than 1");
+	public long getFrameCount() {
+		return frameCount;
+	}
+
+	public final Image loadImage(String path) {
+		requireNonNull(path, "path");
+
+		BufferedImage bi = null;
+
+		try {
+			bi = ImageIO.read(new File(path));
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 
-		if (sw != weight) {
-			Style.setStrokeWeight(new BasicStroke(weight));
-		}
+		return new Image(bi);
+	}
 
-		graphics.setStroke(Style.getStrokeWeight());
+	
+	// == Window API ==
+	public final void setResizeEnabled(boolean enabled) {
+		frame.setResizable(enabled);
 	}
 
 	public final int getWidth() {
@@ -92,22 +117,6 @@ public abstract class MicroFrame {
 
 	public final int getHeight() {
 		return height;
-	}
-
-	public final int getMouseX() {
-		return mouseX;
-	}
-
-	public final int getMouseY() {
-		return mouseY;
-	}
-
-	public final int getMouseButton() {
-		return mouseButton;
-	}
-
-	public final boolean isMousePressed() {
-		return mousePressed;
 	}
 
 	public final void setWindowSize(int width, int height) {
@@ -134,7 +143,7 @@ public abstract class MicroFrame {
 		setWindowSize(width, height);
 	}
 
-	public final String getTitle() {
+	public final String getWindowTitle() {
 		return title;
 	}
 
@@ -142,21 +151,203 @@ public abstract class MicroFrame {
 		this.title = requireNonNull(title, "title");
 	}
 
-	public final double getFrameRate() {
-		return FramePerSecond.getFrameRate();
+	
+	// == Style API ==
+	public final float getStrokeWeight() {
+		return Style.getStrokeWeight().getLineWidth();
 	}
 
-	public final void setFrameRate(int frameRate) {
-		if (frameRate < 1) {
-			throw new IllegalArgumentException("Frame rate cannot be less than 1");
+	public final void setStrokeWeight(float weight) {
+		float sw = Style.getStrokeWeight().getLineWidth();
+
+		if (weight < 1) {
+			throw new IllegalArgumentException("Stroke weight cannot be less than 1");
 		}
-		this.frameRate = frameRate;
+
+		if (sw != weight) {
+			Style.setStrokeWeight(new BasicStroke(weight));
+		}
+
+		graphics.setStroke(Style.getStrokeWeight());
 	}
 
-	public long getFrameCount() {
-		return frameCount;
+	public final void setTextSize(int textSize) {
+		if (graphics.getFont().getSize() == textSize) {
+			return;
+		}
+
+		if (textSize < 1) {
+			throw new IllegalArgumentException("Text size cannot be less than 1");
+		}
+
+		graphics.setFont(graphics.getFont().deriveFont((float) textSize));
+
 	}
 
+	public final void fill(int red, int green, int blue, int alpha) {
+		Style.setFill(ColorPool.getColor(red, green, blue, alpha));
+	}
+
+	public final void fill(int red, int green, int blue) {
+		fill(red, green, blue, 255);
+	}
+
+	public final void fill(int gray, int alpha) {
+		fill(gray, gray, gray, alpha);
+	}
+
+	public final void fill(int gray) {
+		fill(gray, 255);
+	}
+
+	public final void fill(Color color) {
+		if (color == null) {
+			throw new IllegalArgumentException("Color cannot be null");
+		}
+
+		fill(color.getRed(), color.getGreen(), color.getBlue(), color.getAlpha());
+	}
+
+	public final void stroke(int red, int green, int blue, int alpha) {
+		Style.setStroke(ColorPool.getColor(red, green, blue, alpha));
+	}
+
+	public final void stroke(int red, int green, int blue) {
+		stroke(red, green, blue, 255);
+	}
+
+	public final void stroke(int gray, int alpha) {
+		stroke(gray, gray, gray, alpha);
+	}
+
+	public final void stroke(int gray) {
+		stroke(gray, 255);
+	}
+
+	public final void stroke(Color color) {
+		if (color == null) {
+			throw new IllegalArgumentException("Color cannot be null");
+		}
+		stroke(color.getRed(), color.getGreen(), color.getBlue(), color.getAlpha());
+	}
+
+	public final void background(int red, int green, int blue, int alpha) {
+		final Color fillOld = Style.getFill();
+		final Color strokeOld = Style.getStroke();
+
+		strokeOff();
+		fill(red, green, blue, alpha);
+		rect(0, 0, getWidth(), getHeight());
+
+		stroke(strokeOld);
+		fill(fillOld);
+	}
+
+	public final void background(int red, int green, int blue) {
+		background(red, green, blue, 255);
+	}
+
+	public final void background(int gray, int alpha) {
+		background(gray, gray, gray, alpha);
+	}
+
+	public final void background(int gray) {
+		background(gray, gray, gray, 255);
+	}
+
+	public final void background(Color color) {
+		if (color == null) {
+			throw new IllegalArgumentException("Color cannot be null");
+		}
+		background(color.getRed(), color.getGreen(), color.getBlue(), color.getAlpha());
+	}
+
+	public final void strokeOff() {
+		stroke(0, 0);
+	}
+
+	public final void fillOff() {
+		fill(0, 0);
+	}
+
+	
+	// == Interaction API ==
+	public final int getMouseX() {
+		return mouseX;
+	}
+
+	public final int getMouseY() {
+		return mouseY;
+	}
+
+	public final int getLastPressedMouseButton() {
+		return lastPressedMouseButton;
+	}
+	
+	public final char getPressedKey() {
+		return pressedKey;
+	}
+
+	public final boolean isMousePressed() {
+		return mousePressed;
+	}
+	
+	public void onMousePressed(MouseEvent e) {
+	}
+	
+	public void onMousePressed() {
+	}
+
+	public void onMouseReleased(MouseEvent e) {
+	}
+	
+	public void onMouseReleased() {
+	}
+
+	public void onMouseClicked(MouseEvent e) {
+	}
+	
+	public void onMouseClicked() {
+	}
+
+	public void onMouseMoved(MouseEvent e) {
+	}
+	
+	public void onMouseMoved() {
+	}
+
+	public void onMouseDragged(MouseEvent e) {
+	}
+	
+	public void onMouseDragged() {
+	}
+
+	public void onMouseWheelMoved(MouseWheelEvent e) {
+	}
+	
+	public void onMouseWheelMoved() {
+	}
+
+	public void onKeyTyped(KeyEvent e) {
+	}
+	
+	public void onKeyTyped() {
+	}
+
+	public void onKeyPressed(KeyEvent e) {
+	}
+	
+	public void onKeyPressed() {
+	}
+
+	public void onKeyReleased(KeyEvent e) {
+	}
+	
+	public void onKeyReleased() {
+	}
+
+	
+	// == Rendering Graphics ==
 	public final void line(int x, int y, int x1, int y1) {
 		if (Style.getStroke().getAlpha() != 0) {
 			graphics.setColor(Style.getStroke());
@@ -244,126 +435,7 @@ public abstract class MicroFrame {
 
 	}
 
-	public final void setTextSize(int textSize) {
-		if (graphics.getFont().getSize() == textSize) {
-			return;
-		}
-
-		if (textSize < 1) {
-			throw new IllegalArgumentException("Text size cannot be less than 1");
-		}
-
-		graphics.setFont(graphics.getFont().deriveFont((float) textSize));
-
-	}
-
-	public final void fill(int red, int green, int blue, int alpha) {
-		Style.setFill(ColorPool.getColor(red, green, blue, alpha));
-	}
-
-	public final void fill(int red, int green, int blue) {
-		Style.setFill(ColorPool.getColor(red, green, blue, 255));
-	}
-
-	public final void fill(int gray, int alpha) {
-		Style.setFill(ColorPool.getColor(gray, gray, gray, alpha));
-	}
-
-	public final void fill(int gray) {
-		Style.setFill(ColorPool.getColor(gray, gray, gray, 255));
-	}
-
-	public final void stroke(int red, int green, int blue, int alpha) {
-		Style.setStroke(ColorPool.getColor(red, green, blue, alpha));
-	}
-
-	public final void stroke(int red, int green, int blue) {
-		Style.setStroke(ColorPool.getColor(red, green, blue, 255));
-	}
-
-	public final void stroke(int gray, int alpha) {
-		Style.setStroke(ColorPool.getColor(gray, gray, gray, alpha));
-	}
-
-	public final void stroke(int gray) {
-		Style.setStroke(ColorPool.getColor(gray, gray, gray, 255));
-	}
-
-	public final void background(int red, int green, int blue, int alpha) {
-		Style.setFill(ColorPool.getColor(red, green, blue, alpha));
-
-		strokeOff();
-
-		rect(0, 0, getWidth(), getHeight());
-	}
-
-	public final void background(int red, int green, int blue) {
-		background(red, green, blue, 255);
-	}
-
-	public final void background(int gray, int alpha) {
-		background(gray, gray, gray, alpha);
-	}
-
-	public final void background(int gray) {
-		background(gray, gray, gray, 255);
-	}
-
-	public final void strokeOff() {
-		Style.setStroke(ColorPool.getColor(0, 0, 0, 0));
-	}
-
-	public final void fillOff() {
-		Style.setFill(ColorPool.getColor(0, 0, 0, 0));
-	}
-
-	public final Image loadImage(String path) {
-		requireNonNull(path, "path");
-
-		BufferedImage bi = null;
-
-		try {
-			bi = ImageIO.read(new File(path));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		return new Image(bi);
-	}
-
-	public abstract void onCreate();
-
-	public abstract void onRender();
-
-	public abstract void onQuit();
-
-	public void onMousePressed() {
-	}
-
-	public void onMouseReleased() {
-	}
-
-	public void onMouseClicked() {
-	}
-
-	public void onMouseMoved() {
-	}
-
-	public void onMouseDragged() {
-	}
-
-	public void onMouseWheelMoved() {
-	}
-
-	public void onKeyTyped() {
-	}
-
-	public void onKeyPressed() {
-	}
-
-	public void onKeyReleased() {
-	}
-
+	
 	private void run() {
 
 		while (running) {
@@ -432,23 +504,14 @@ public abstract class MicroFrame {
 			}
 		});
 
-		canvas.addKeyListener(new KeyAdapter() {
-			@Override
-			public void keyPressed(KeyEvent e) {
-				if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-					onQuit();
-					stop();
-				}
-			}
-		});
-
 		canvas.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(MouseEvent e) {
 				mouseX = e.getX();
 				mouseY = e.getY();
 				mousePressed = true;
-				mouseButton = e.getButton();
+				lastPressedMouseButton = e.getButton();
+				onMousePressed(e);
 				onMousePressed();
 			}
 
@@ -457,7 +520,8 @@ public abstract class MicroFrame {
 				mouseX = e.getX();
 				mouseY = e.getY();
 				mousePressed = false;
-				mouseButton = e.getButton();
+				lastPressedMouseButton = e.getButton();
+				onMouseReleased(e);
 				onMouseReleased();
 			}
 
@@ -465,6 +529,7 @@ public abstract class MicroFrame {
 			public void mouseClicked(MouseEvent e) {
 				mouseX = e.getX();
 				mouseY = e.getY();
+				onMouseClicked(e);
 				onMouseClicked();
 			}
 
@@ -476,6 +541,7 @@ public abstract class MicroFrame {
 			public void mouseMoved(MouseEvent e) {
 				mouseX = e.getX();
 				mouseY = e.getY();
+				onMouseMoved(e);
 				onMouseMoved();
 			}
 
@@ -483,6 +549,7 @@ public abstract class MicroFrame {
 			public void mouseDragged(MouseEvent e) {
 				mouseX = e.getX();
 				mouseY = e.getY();
+				onMouseDragged(e);
 				onMouseDragged();
 			}
 
@@ -492,6 +559,7 @@ public abstract class MicroFrame {
 
 			@Override
 			public void mouseWheelMoved(MouseWheelEvent e) {
+				onMouseWheelMoved(e);
 				onMouseWheelMoved();
 			}
 
@@ -501,16 +569,26 @@ public abstract class MicroFrame {
 
 			@Override
 			public void keyTyped(KeyEvent e) {
+				onKeyTyped(e);
 				onKeyTyped();
 			}
 
 			@Override
 			public void keyPressed(KeyEvent e) {
+				if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+					onQuit();
+					stop();
+				}
+				
+				pressedKey = e.getKeyChar();
+				
+				onKeyPressed(e);
 				onKeyPressed();
 			}
 
 			@Override
 			public void keyReleased(KeyEvent e) {
+				onKeyReleased(e);
 				onKeyReleased();
 			}
 		});

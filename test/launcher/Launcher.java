@@ -1,5 +1,7 @@
 package launcher;
 
+import java.awt.Color;
+
 import microframe.core.MicroFrame;
 import microframe.graphics.Image;
 
@@ -22,10 +24,10 @@ public class Launcher extends MicroFrame {
 
 	@Override
 	public void onRender() {
-		background(0,1);
+		stroke(Color.RED);
+		background(Color.BLACK);
 		
-		stroke(255,0,0);
-		point(getMouseX(),getMouseY());
+		line(100,100,300,300);
 		
 		System.out.println(getMouseX() + " : " + getMouseY());
 	}
@@ -33,12 +35,6 @@ public class Launcher extends MicroFrame {
 	@Override
 	public void onQuit() {
 		
-	}
-	
-	@Override
-	public void onMousePressed() {
-		setWindowSize(getWidth()+10,getHeight());
-
 	}
 	
 }
