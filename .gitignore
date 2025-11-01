@@ -1,1 +1,12 @@
-/bin/
+# Eclipse
+.project
+.classpath
+.settings/
+
+# Java
+*.class
+*.jar
+*.log
+
+# Build
+bin/
